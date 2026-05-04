@@ -4,73 +4,61 @@ using UnityEngine.UI;
 using NUnit.Framework;
 using System.Collections.Generic;
 
-
-
-public enum TeamID
-{
-    Red = 0,
-    Blue = 1,
-}
-
 public class UIMainMenu : MonoBehaviour
 {
     [SerializeField] private TMP_InputField if_PlayerName;
     [SerializeField] private TMP_Dropdown DD_Team;
+
     [SerializeField] private Button btn_StartHost;
     [SerializeField] private Button btn_StartClient;
     [SerializeField] private Button btn_StartServer;
-    private TeamID teamID;
 
-    void Start()
+    private void Start()
+    {
+        SetupTeamDropdown();
+        ValidateName();
+    }
+
+    private void Update()
     {
         ValidateName();
+    }
 
-        var teamIDs = System.Enum.GetNames(typeof(TeamID));
+    private void SetupTeamDropdown()
+    {
+        string[] teamIDs = System.Enum.GetNames(typeof(TeamID));
 
         List<TMP_Dropdown.OptionData> ddOptions = new();
 
-        foreach(var teamId in teamIDs)
+        foreach (string teamID in teamIDs)
         {
-            ddOptions.Add(new TMP_Dropdown.OptionData(teamId));
+            ddOptions.Add(new TMP_Dropdown.OptionData(teamID));
         }
+
         DD_Team.options.Clear();
         DD_Team.options = ddOptions;
-
-
-    }
-
-    void Update()
-    {
-        ValidateName();
+        DD_Team.value = 0;
+        DD_Team.RefreshShownValue();
     }
 
     public void ValidateName()
     {
-        if (string.IsNullOrEmpty(if_PlayerName.text))
-        {
-            btn_StartHost.interactable = false;
-            btn_StartClient.interactable = false;
-            btn_StartServer.interactable = false;
-        }
-        else
-        {
-            btn_StartHost.interactable = true;
-            btn_StartClient.interactable = true;
-            btn_StartServer.interactable = true;
-        }
+        bool hasName = !string.IsNullOrWhiteSpace(if_PlayerName.text);
+
+        btn_StartHost.interactable = hasName;
+        btn_StartClient.interactable = hasName;
+        btn_StartServer.interactable = hasName;
     }
 
     public void OnStartHostPressed()
     {
-        teamID = (TeamID)System.Enum.Parse(typeof(TeamID), DD_Team.captionText.text);
-        NetworkingManager.Singleton.UpdatePlayerName(if_PlayerName.text);
+        SaveLocalPlayerData();
         NetworkingManager.Singleton.StartHost();
     }
 
     public void OnStartClientPressed()
     {
-        teamID = (TeamID)System.Enum.Parse(typeof(TeamID), DD_Team.captionText.text);
-        NetworkingManager.Singleton.UpdatePlayerName(if_PlayerName.text);
+        SaveLocalPlayerData();
         NetworkingManager.Singleton.StartClient();
     }
 
@@ -79,4 +67,9 @@ public class UIMainMenu : MonoBehaviour
         NetworkingManager.Singleton.StartServer();
     }
 
+    private void SaveLocalPlayerData()
+    {
+        TeamID selectedTeam = (TeamID)DD_Team.value;
+        NetworkingManager.Singleton.UpdateLocalPlayerData(if_PlayerName.text, selectedTeam);
+    }
 }
