@@ -1,36 +1,33 @@
 using Unity.Collections;
 using Unity.Netcode;
-using UnityEngine;
+
 public enum TeamID
 {
     Red = 0,
     Blue = 1,
 }
 
+public enum PlayerClassID
+{
+    Tank = 0,
+    DPS = 1,
+}
+
 public struct PlayerData : INetworkSerializable
 {
     public FixedString32Bytes PlayerName;
     public TeamID TeamID;
-    
+    public PlayerClassID ClassID;
+
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
-        if (serializer.IsWriter)
-        {
-            var fastBufferWriter = serializer.GetFastBufferWriter();
-            fastBufferWriter.WriteValueSafe(PlayerName);
-            fastBufferWriter.WriteValueSafe(TeamID);
-        }
-        else if (serializer.IsReader)
-        {
-            var fastBufferReader = serializer.GetFastBufferReader();
-            fastBufferReader.ReadValueSafe(out PlayerName);
-            fastBufferReader.ReadValueSafe(out TeamID);
-
-        }
+        serializer.SerializeValue(ref PlayerName);
+        serializer.SerializeValue(ref TeamID);
+        serializer.SerializeValue(ref ClassID);
     }
 
     public override string ToString()
     {
-        return $"PlayerName: {PlayerName} , TeamId : {TeamID}";
+        return $"PlayerName: {PlayerName}, TeamID: {TeamID}, ClassID: {ClassID}";
     }
 }

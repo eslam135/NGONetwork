@@ -9,9 +9,11 @@ public class NetworkingManager : NetworkManager
 
     private string _localPlayerName = "Player";
     private TeamID _localPlayerTeam = TeamID.Red;
+    private PlayerClassID _localPlayerClass = PlayerClassID.Tank;
 
     public string LocalPlayerName => _localPlayerName;
     public TeamID LocalPlayerTeam => _localPlayerTeam;
+    public PlayerClassID LocalPlayerClass => _localPlayerClass;
 
     private void Awake()
     {
@@ -27,10 +29,11 @@ public class NetworkingManager : NetworkManager
         };
     }
 
-    public void UpdateLocalPlayerData(string newName, TeamID teamID)
+    public void UpdateLocalPlayerData(string newName, TeamID teamID, PlayerClassID classID)
     {
         _localPlayerName = string.IsNullOrWhiteSpace(newName) ? "Player" : newName;
         _localPlayerTeam = teamID;
+        _localPlayerClass = classID;
     }
 
     public NetworkPlayer GetPlayer(ulong clientID)
@@ -47,12 +50,7 @@ public class NetworkingManager : NetworkManager
                 return null;
             }
 
-            NetworkPlayer player = networkClient.PlayerObject.GetComponent<NetworkPlayer>();
-
-            if (player != null)
-            {
-                return player;
-            }
+            return networkClient.PlayerObject.GetComponent<NetworkPlayer>();
         }
 
         return null;

@@ -3,11 +3,15 @@ using UnityEngine;
 
 public class BulletManager : NetworkBehaviour
 {
+    [Header("Bullet Data")]
     [SerializeField] private float _bulletSpeed = 10f;
-    [SerializeField] private int _bulletDamage = 20;
     [SerializeField] private float _lifeTime = 3f;
 
+    [Header("Hit VFX")]
+    [SerializeField] private GameObject _hitEffectPrefab;
+    [SerializeField] private float _hitEffectLifetime = 2f;
     private Rigidbody _rb;
+    private int _damage;
 
     public ulong ShooterID { get; private set; }
 
@@ -16,9 +20,11 @@ public class BulletManager : NetworkBehaviour
         _rb = GetComponent<Rigidbody>();
     }
 
-    public void Initialize(ulong shooterID)
+    public void Initialize(ulong shooterID, int damage)
     {
         ShooterID = shooterID;
+        _damage = damage;
+
         IgnoreShooterCollision();
     }
 
@@ -44,6 +50,11 @@ public class BulletManager : NetworkBehaviour
 
     private void IgnoreShooterCollision()
     {
+        if (NetworkManager.Singleton == null)
+        {
+            return;
+        }
+
         if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(ShooterID, out NetworkClient shooterClient))
         {
             return;
@@ -73,6 +84,13 @@ public class BulletManager : NetworkBehaviour
             return;
         }
 
+        ContactPoint contactPoint = collision.GetContact(0);
+
+        SpawnHitEffectRpc(
+            contactPoint.point,
+            Quaternion.LookRotation(contactPoint.normal)
+        );
+
         NetworkPlayer attackedPlayer = collision.gameObject.GetComponentInParent<NetworkPlayer>();
 
         if (attackedPlayer == null)
@@ -91,23 +109,20 @@ public class BulletManager : NetworkBehaviour
 
         if (attackedPlayer.OwnerClientId == ShooterID)
         {
-            Debug.Log("Shooting Myself, Abort!");
             DespawnBullet();
             return;
         }
 
         if (attackedPlayer.TeamID == shooterPlayer.TeamID)
         {
-            Debug.Log("FriendlyFire, Abort!");
             DespawnBullet();
             return;
         }
 
-        attackedPlayer.TakeDamage(_bulletDamage, ShooterID);
+        attackedPlayer.TakeDamage(_damage, ShooterID);
 
         DespawnBullet();
     }
-
     private void DespawnBullet()
     {
         if (!IsServer)
@@ -123,5 +138,17 @@ public class BulletManager : NetworkBehaviour
         {
             Destroy(gameObject);
         }
+    }
+
+    [Rpc(SendTo.Everyone)]
+    private void SpawnHitEffectRpc(Vector3 position, Quaternion rotation)
+    {
+        if (_hitEffectPrefab == null)
+        {
+            return;
+        }
+
+        GameObject effect = Instantiate(_hitEffectPrefab, position, rotation);
+        Destroy(effect, _hitEffectLifetime);
     }
 }
